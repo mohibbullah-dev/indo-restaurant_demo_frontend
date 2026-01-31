@@ -6,10 +6,18 @@ import CartBar from "./components/CartBar";
 import CheckoutSheet from "./components/CheckoutSheet";
 import { CATEGORIES, MENU_ITEMS } from "./mockMenu";
 import { TIME_SLOTS } from "./mockSlots";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "./firebase";
 
 export default function App() {
   // Feature 1 mock state (later we will replace with Firestore settings)
-  const [isOpen, setIsOpen] = useState(true);
+  const [settings, setSettings] = useState({
+    isOpen: true,
+    acceptingOrders: true,
+    timezone: "Africa/Cairo",
+    minLeadMinutes: 30,
+  });
+  const isOpen = settings.isOpen;
 
   // Language + RTL
   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "id");
@@ -20,6 +28,16 @@ export default function App() {
     document.documentElement.lang = lang;
     document.documentElement.dir = rtl ? "rtl" : "ltr";
   }, [lang, rtl]);
+
+  useEffect(() => {
+    const ref = doc(db, "settings", "main");
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        setSettings((prev) => ({ ...prev, ...snap.data() }));
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Feature 2: Menu filter + cart
   const [activeCategory, setActiveCategory] = useState("all");
@@ -131,7 +149,11 @@ export default function App() {
                 type="button"
                 className="rounded-3xl border border-black/10 bg-white px-4 py-4 text-sm font-semibold text-zinc-900 shadow-sm active:scale-[0.99]"
                 onClick={() => setCheckoutOpen(true)}
-                disabled={cartCount === 0}
+                disabled={
+                  cartCount === 0 ||
+                  !settings.isOpen ||
+                  !settings.acceptingOrders
+                }
               >
                 {t(lang, "checkout")}
               </button>
