@@ -48,6 +48,11 @@ const translations = {
     copyLink: "Copy link",
     copied: "Copied!",
     whatsAppPrefillHint: "We’ll open WhatsApp with your order details",
+    // time
+    date: "Date",
+    time: "Time",
+    tooSoon: "Please choose a later time",
+    saving: "Saving...",
   },
   id: {
     brand: "Pesan Makanan",
@@ -83,6 +88,11 @@ const translations = {
     copyLink: "Salin link",
     copied: "Tersalin!",
     whatsAppPrefillHint: "WhatsApp akan terbuka dengan detail pesanan",
+    // time
+    date: "Tanggal",
+    time: "Waktu",
+    tooSoon: "Pilih waktu yang lebih nanti",
+    saving: "Menyimpan...",
   },
   ar: {
     brand: "طلب الطعام",
@@ -118,5 +128,10 @@ const translations = {
     copyLink: "نسخ الرابط",
     copied: "تم النسخ!",
     whatsAppPrefillHint: "سنفتح واتساب مع تفاصيل طلبك",
+    // time
+    date: "التاريخ",
+    time: "الوقت",
+    tooSoon: "اختر وقتاً لاحقاً",
+    saving: "جارٍ الحفظ...",
   },
 };

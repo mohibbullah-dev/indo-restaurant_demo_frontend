@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { t } from "../i18n";
+import {
+  buildLocalISO,
+  isAtLeastMinutesFromNow,
+  todayISODate,
+} from "../utils/time";
+import { db } from "../firebase";
 
 function buildWhatsAppLink({ phone, text }) {
-  // phone should be international like "201234567890" (no +)
   const safeText = encodeURIComponent(text);
   const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
   return `${base}?text=${safeText}`;
@@ -14,52 +20,41 @@ export default function CheckoutSheet({
   onClose,
   cart,
   total,
-  slots,
-  restaurantWhatsAppNumber, // e.g. "201234567890" later
-  onOrderCreated, // callback(order)
+  restaurantWhatsAppNumber,
+  settings,
+  onOrderCreated,
 }) {
-  const [slot, setSlot] = useState(slots?.[0] || "");
+  const [date, setDate] = useState(todayISODate());
+  const [time, setTime] = useState("");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const itemsArray = useMemo(() => Object.values(cart), [cart]);
+  const canSubmitBase = itemsArray.length > 0 && !!date && !!time;
 
   useEffect(() => {
     if (open) {
       setCopied(false);
-      setSlot((s) => s || slots?.[0] || "");
+      setSaving(false);
+      setError("");
+      setDate(todayISODate());
+      setTime("");
     }
-  }, [open, slots]);
+  }, [open]);
 
-  const itemsArray = useMemo(() => Object.values(cart), [cart]);
-  const canSubmit = itemsArray.length > 0 && !!slot;
+  const tooSoon = useMemo(() => {
+    if (!canSubmitBase) return false;
+    return !isAtLeastMinutesFromNow(date, time, settings?.minLeadMinutes ?? 0);
+  }, [canSubmitBase, date, time, settings]);
 
-  const orderText = useMemo(() => {
-    const lines = [];
-    lines.push("🧾 NEW ORDER");
-    lines.push(`⏰ Time: ${slot}`);
-    if (name.trim()) lines.push(`👤 Name: ${name.trim()}`);
-    if (notes.trim()) lines.push(`📝 Notes: ${notes.trim()}`);
-    lines.push("");
-    lines.push("Items:");
-    for (const it of itemsArray) {
-      const label = it.name?.[lang] || it.name?.en || it.id;
-      lines.push(`- ${label} x${it.qty} = ${it.qty * it.price} EGP`);
-    }
-    lines.push("");
-    lines.push(`💰 Total: ${total} EGP`);
-    return lines.join("\n");
-  }, [itemsArray, lang, name, notes, slot, total]);
+  const canSubmit = canSubmitBase && !tooSoon && !saving;
 
-  const waLink = useMemo(() => {
-    return buildWhatsAppLink({
-      phone: restaurantWhatsAppNumber,
-      text: orderText,
-    });
-  }, [restaurantWhatsAppNumber, orderText]);
-
-  const copyLink = async () => {
+  const copyLink = async (link) => {
     try {
-      await navigator.clipboard.writeText(waLink);
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -67,38 +62,101 @@ export default function CheckoutSheet({
     }
   };
 
-  const placeOrder = () => {
-    if (!canSubmit) return;
+  const placeOrder = async () => {
+    setError("");
+    if (!canSubmitBase) return;
 
-    const orderId = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    const order = {
-      id: orderId,
-      slot,
-      name: name.trim(),
-      notes: notes.trim(),
-      items: itemsArray.map((x) => ({
-        id: x.id,
-        qty: x.qty,
-        price: x.price,
-        name: x.name,
-      })),
-      total,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-      waLink,
-    };
+    if (tooSoon) {
+      setError(t(lang, "tooSoon"));
+      return;
+    }
 
-    onOrderCreated?.(order);
+    try {
+      setSaving(true);
 
-    // Open WhatsApp immediately (best conversion)
-    window.open(waLink, "_blank", "noopener,noreferrer");
+      const scheduledAtIso = buildLocalISO(date, time);
+
+      // Create a document reference FIRST to get orderId
+      const ref = doc(collection(db, "orders"));
+      const orderId = ref.id;
+
+      const trackUrl = `${window.location.origin}/order/${orderId}`;
+
+      // Build WhatsApp message including orderId + track link
+      const lines = [];
+      lines.push("🧾 NEW ORDER");
+      lines.push(`🆔 Order ID: ${orderId}`);
+      lines.push(`📅 Date: ${date}`);
+      lines.push(`⏰ Time: ${time}`);
+      if (name.trim()) lines.push(`👤 Name: ${name.trim()}`);
+      if (notes.trim()) lines.push(`📝 Notes: ${notes.trim()}`);
+      lines.push("");
+      lines.push("Items:");
+      for (const it of itemsArray) {
+        const label = it.name?.[lang] || it.name?.en || it.id;
+        lines.push(`- ${label} x${it.qty} = ${it.qty * it.price} EGP`);
+      }
+      lines.push("");
+      lines.push(`💰 Total: ${total} EGP`);
+      lines.push("");
+      lines.push(`🔎 Track/Cancel: ${trackUrl}`);
+
+      const orderText = lines.join("\n");
+
+      const waLink = buildWhatsAppLink({
+        phone: restaurantWhatsAppNumber,
+        text: orderText,
+      });
+
+      const payload = {
+        id: orderId,
+        channel: "whatsapp",
+        customer: {
+          name: name.trim() || null,
+          notes: notes.trim() || null,
+        },
+        items: itemsArray.map((x) => ({
+          id: x.id,
+          qty: x.qty,
+          price: x.price,
+          name: x.name,
+        })),
+        total,
+        status: "pending",
+        scheduled: {
+          date,
+          time,
+          scheduledAtIso,
+          timezone: settings?.timezone || "Africa/Cairo",
+          minLeadMinutes: settings?.minLeadMinutes ?? 0,
+        },
+        trackUrl,
+        createdAt: serverTimestamp(),
+        wa: {
+          to: restaurantWhatsAppNumber || null,
+          prefillText: orderText,
+          prefillLink: waLink,
+        },
+      };
+
+      await setDoc(ref, payload);
+
+      onOrderCreated?.({ ...payload });
+
+      // Open WhatsApp immediately
+      window.open(waLink, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      console.error(e);
+      setError("Failed to save order. Check Firestore rules / config.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-40">
-      {/* Backdrop */}
       <button
         type="button"
         onClick={onClose}
@@ -106,16 +164,13 @@ export default function CheckoutSheet({
         aria-label="Close"
       />
 
-      {/* Sheet */}
       <div className="absolute bottom-0 left-0 right-0">
         <div className="mx-auto w-full max-w-5xl px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
           <div className="rounded-t-3xl border border-black/10 bg-white shadow-xl">
-            {/* Handle */}
             <div className="flex justify-center pt-3">
               <div className="h-1.5 w-12 rounded-full bg-black/10" />
             </div>
 
-            {/* Header */}
             <div className="flex items-center justify-between px-4 pb-3 pt-3">
               <div className="text-sm font-semibold">
                 {t(lang, "checkoutTitle")}
@@ -130,32 +185,32 @@ export default function CheckoutSheet({
             </div>
 
             <div className="px-4 pb-4">
-              {/* Time slots */}
-              <div className="text-xs font-semibold text-zinc-700">
-                {t(lang, "chooseTime")}
-              </div>
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
-                {slots.map((s) => {
-                  const active = s === slot;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setSlot(s)}
-                      className={[
-                        "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold active:scale-[0.98]",
-                        active
-                          ? "bg-black text-white border-black"
-                          : "bg-white border-black/10 text-zinc-700 hover:bg-black/5",
-                      ].join(" ")}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1">
+                  <span className="text-xs font-semibold text-zinc-700">
+                    {t(lang, "date")}
+                  </span>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-xs font-semibold text-zinc-700">
+                    {t(lang, "time")}
+                  </span>
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
+                  />
+                </label>
               </div>
 
-              {/* Inputs */}
               <div className="mt-4 grid gap-3">
                 <label className="grid gap-1">
                   <span className="text-xs font-semibold text-zinc-700">
@@ -182,12 +237,21 @@ export default function CheckoutSheet({
                 </label>
               </div>
 
-              {/* Hint */}
-              <div className="mt-3 text-xs text-zinc-500">
-                {t(lang, "whatsAppPrefillHint")}
-              </div>
+              {tooSoon ? (
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  {t(lang, "tooSoon")}{" "}
+                  {settings?.minLeadMinutes
+                    ? `(${settings.minLeadMinutes} min)`
+                    : ""}
+                </div>
+              ) : null}
 
-              {/* Actions */}
+              {error ? (
+                <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
+                  {error}
+                </div>
+              ) : null}
+
               <div className="mt-4 flex items-center gap-2">
                 <button
                   type="button"
@@ -200,12 +264,12 @@ export default function CheckoutSheet({
                       : "bg-black/20 text-white/70",
                   ].join(" ")}
                 >
-                  {t(lang, "placeOrder")}
+                  {saving ? t(lang, "saving") : t(lang, "placeOrder")}
                 </button>
 
                 <button
                   type="button"
-                  onClick={copyLink}
+                  onClick={() => copyLink(`${window.location.origin}/`)}
                   className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 active:scale-[0.99]"
                   title={t(lang, "copyLink")}
                 >
@@ -213,9 +277,12 @@ export default function CheckoutSheet({
                 </button>
               </div>
 
-              {/* Total */}
               <div className="mt-3 text-sm font-semibold">
                 {t(lang, "total")}: {total} EGP
+              </div>
+
+              <div className="mt-2 text-xs text-zinc-500">
+                {t(lang, "whatsAppPrefillHint")}
               </div>
             </div>
           </div>
