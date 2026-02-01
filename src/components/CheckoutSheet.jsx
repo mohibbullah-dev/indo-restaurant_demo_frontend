@@ -28,6 +28,7 @@ export default function CheckoutSheet({
   const [time, setTime] = useState("");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
+  const [customerWa, setCustomerWa] = useState("");
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -233,6 +234,19 @@ export default function CheckoutSheet({
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
                     placeholder={t(lang, "notesOptional")}
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-xs font-semibold text-zinc-700">
+                    {t(lang, "customerWhatsApp")}
+                  </span>
+                  <input
+                    value={customerWa}
+                    onChange={(e) => setCustomerWa(e.target.value)}
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
+                    placeholder="201234567890"
+                    inputMode="numeric"
                   />
                 </label>
               </div>
