@@ -124,9 +124,30 @@ export default function AdminDashboard({ lang, setLang }) {
   const closeDetails = () => setSelectedId(null);
 
   const replyLink = useMemo(() => {
-    if (!selectedOrder?.customer?.whatsapp) return null;
-    const msg = `Order ${selectedOrder.id}\nStatus: ${selectedOrder.status}\nScheduled: ${selectedOrder?.scheduled?.date || ""} ${selectedOrder?.scheduled?.time || ""}`;
-    return buildWaLink(selectedOrder.customer.whatsapp, msg);
+    const phone = selectedOrder?.customer?.whatsapp;
+    if (!phone) return null;
+
+    const items = (selectedOrder.items || [])
+      .map(
+        (it) =>
+          `- ${it?.name?.en || it.id} x${it.qty} = ${it.qty * it.price} EGP`,
+      )
+      .join("\n");
+
+    const track =
+      selectedOrder.trackUrl ||
+      `${window.location.origin}/order/${selectedOrder.id}`;
+
+    const msg =
+      `✅ Update for your order\n` +
+      `Order ID: ${selectedOrder.id}\n` +
+      `Status: ${selectedOrder.status}\n` +
+      `Time: ${selectedOrder?.scheduled?.date || ""} ${selectedOrder?.scheduled?.time || ""}\n\n` +
+      `Items:\n${items}\n\n` +
+      `Total: ${selectedOrder.total} EGP\n\n` +
+      `Track/Cancel: ${track}`;
+
+    return buildWaLink(phone, msg);
   }, [selectedOrder]);
 
   return (

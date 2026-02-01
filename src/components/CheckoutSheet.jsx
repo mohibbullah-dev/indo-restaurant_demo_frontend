@@ -38,6 +38,7 @@ export default function CheckoutSheet({
 
   useEffect(() => {
     if (open) {
+      setCustomerWa("");
       setCopied(false);
       setSaving(false);
       setError("");
@@ -108,13 +109,14 @@ export default function CheckoutSheet({
         phone: restaurantWhatsAppNumber,
         text: orderText,
       });
-
+      const waClean = customerWa.replace(/[^\d]/g, "");
       const payload = {
         id: orderId,
         channel: "whatsapp",
         customer: {
           name: name.trim() || null,
           notes: notes.trim() || null,
+          whatsapp: waClean || null,
         },
         items: itemsArray.map((x) => ({
           id: x.id,
