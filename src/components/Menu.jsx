@@ -241,7 +241,7 @@ export default function Menu({
       </div>
 
       {/* ✅ Grid: mobile+tablet = 2 cols, lg = 3 cols */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {filtered.map((it) => {
           const name = it?.name?.[lang] || it?.name?.en || it.id;
           const desc = it?.desc?.[lang] || it?.desc?.en || "";
