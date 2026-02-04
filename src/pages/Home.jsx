@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -21,7 +21,6 @@ export default function Home({
   menuLoading = false,
   menuError = "",
 }) {
-  // Settings from Firestore
   const [settings, setSettings] = useState({
     isOpen: true,
     acceptingOrders: true,
@@ -35,7 +34,7 @@ export default function Home({
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setAdminUser(u); // u === null → not logged in
+      setAdminUser(u);
     });
     return () => unsub();
   }, []);
@@ -50,11 +49,9 @@ export default function Home({
     return () => unsub();
   }, []);
 
-  // Menu filter + cart
   const [activeCategory, setActiveCategory] = useState("all");
-  const [cart, setCart] = useState({}); // { [itemId]: { id, price, qty, name } }
+  const [cart, setCart] = useState({});
 
-  // keep activeCategory valid when categories change
   useEffect(() => {
     if (activeCategory === "all") return;
     const exists = categories.some((c) => c.id === activeCategory);
@@ -65,8 +62,6 @@ export default function Home({
     setCart((prev) => {
       const existing = prev[item.id];
       const qty = (existing?.qty || 0) + 1;
-
-      // keep full item data (so CheckoutSheet can use name in 3 languages)
       return {
         ...prev,
         [item.id]: {
@@ -85,7 +80,6 @@ export default function Home({
   const cartCount = Object.values(cart).reduce((s, x) => s + x.qty, 0);
   const total = Object.values(cart).reduce((s, x) => s + x.qty * x.price, 0);
 
-  // Checkout sheet
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const restaurantWa =
@@ -103,7 +97,6 @@ export default function Home({
       });
       return;
     }
-
     setCheckoutOpen(true);
   };
 
@@ -118,10 +111,9 @@ export default function Home({
   };
 
   return (
-    <div className="min-h-dvh bg-zinc-50 text-zinc-900">
-      {/* Top app bar */}
+    <div className="min-h-dvh bg-zinc-50 text-zinc-900 overflow-x-hidden">
       <header className="sticky top-0 z-20 border-b border-black/5 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-3 py-3 sm:px-4">
           <div className="flex flex-col">
             <span className="text-base font-semibold leading-tight">
               {t(lang, "brand")}
@@ -133,7 +125,7 @@ export default function Home({
             {adminUser ? (
               <Link
                 to="/admin"
-                className="rounded-full border border-black/10 bg-black px-4 py-2 text-xs font-semibold text-white hover:bg-black/90"
+                className="rounded-full border border-black/10 bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-black/90 sm:px-4"
               >
                 Admin
               </Link>
@@ -144,12 +136,9 @@ export default function Home({
         </div>
       </header>
 
-      {/* Responsive layout */}
-      <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-4">
+      <main className="mx-auto w-full max-w-5xl px-3 pb-28 pt-4 sm:px-4">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-          {/* Left column */}
           <div className="space-y-4">
-            {/* Open/Closed card */}
             <section
               className={[
                 "rounded-3xl p-4 shadow-sm border bg-white",
@@ -195,13 +184,11 @@ export default function Home({
               </div>
             </section>
 
-            {/* Action buttons */}
             <section className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 className="rounded-3xl bg-black px-4 py-4 text-sm font-semibold text-white shadow-sm active:scale-[0.99]"
                 onClick={() => {
-                  // scroll to menu section
                   document.getElementById("menuSection")?.scrollIntoView({
                     behavior: "smooth",
                     block: "start",
@@ -226,7 +213,6 @@ export default function Home({
               </button>
             </section>
 
-            {/* Help text */}
             {!settings.isOpen || !settings.acceptingOrders ? (
               <section className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
                 <div className="text-sm font-semibold">Notice</div>
@@ -237,7 +223,6 @@ export default function Home({
               </section>
             ) : null}
 
-            {/* Menu fetch state (optional small card on left) */}
             {menuLoading ? (
               <section className="rounded-3xl border border-black/10 bg-white p-4">
                 <div className="text-sm font-semibold">Loading menu…</div>
@@ -257,7 +242,6 @@ export default function Home({
             ) : null}
           </div>
 
-          {/* Right column */}
           <div className="space-y-4" id="menuSection">
             <Menu
               lang={lang}
@@ -274,7 +258,6 @@ export default function Home({
         </div>
       </main>
 
-      {/* Cart bar */}
       <CartBar
         lang={lang}
         cartCount={cartCount}
@@ -283,7 +266,6 @@ export default function Home({
         onCheckout={onCheckout}
       />
 
-      {/* Checkout bottom sheet */}
       <CheckoutSheet
         lang={lang}
         open={checkoutOpen}
@@ -295,7 +277,6 @@ export default function Home({
         onOrderCreated={onOrderCreated}
       />
 
-      {/* Bottom fade */}
       <div className="fixed bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-zinc-50 to-transparent" />
     </div>
   );

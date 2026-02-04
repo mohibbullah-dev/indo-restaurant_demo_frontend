@@ -176,7 +176,7 @@ export default function AdminDashboard({ lang, setLang }) {
     <div className="min-h-dvh bg-zinc-50 text-zinc-900">
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-black/5 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-3 py-3 sm:px-4">
           <div className="flex items-center gap-3">
             <div className="text-base font-semibold">{t(lang, "admin")}</div>
 
@@ -245,7 +245,7 @@ export default function AdminDashboard({ lang, setLang }) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-4">
+      <main className="mx-auto w-full max-w-6xl px-3 pb-24 pt-4 sm:px-4">
         <div className="grid gap-4 md:grid-cols-[280px_1fr]">
           {/* Sidebar (desktop/tablet) */}
           <aside className="hidden md:block space-y-3">
@@ -468,7 +468,7 @@ export default function AdminDashboard({ lang, setLang }) {
             aria-label="Close details"
           />
 
-          <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-0 md:right-0 md:left-auto md:h-full md:w-[420px]">
+          <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-0 md:right-0 md:left-auto md:h-full md:w-[min(420px,100vw)]">
             <div className="h-full rounded-t-3xl md:rounded-none md:rounded-l-3xl border border-black/10 bg-white shadow-xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
                 <div className="text-sm font-semibold">

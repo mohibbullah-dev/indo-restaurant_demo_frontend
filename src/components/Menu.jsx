@@ -51,8 +51,8 @@ export default function Menu({
         </div>
       </div>
 
-      {/* Categories chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
+      {/* Categories chips (safe for tiny screens) */}
+      <div className="flex gap-2 overflow-x-auto pb-1 pr-1 [-webkit-overflow-scrolling:touch]">
         {safeCategories.map((c) => {
           const label = c?.name?.[lang] || c?.name?.en || c.id;
           const active = activeCategory === c.id;
@@ -74,8 +74,8 @@ export default function Menu({
         })}
       </div>
 
-      {/* Items: mobile = 1 col, desktop = 2 cols */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      {/* ✅ Grid: mobile+tablet=2 cols, lg+=3 cols */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {filtered.map((it) => {
           const name = it?.name?.[lang] || it?.name?.en || it.id;
           const desc = it?.desc?.[lang] || it?.desc?.en || "";
@@ -86,8 +86,8 @@ export default function Menu({
               key={it.id}
               className="group overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition hover:shadow-md"
             >
-              {/* Wide image header */}
-              <div className="relative h-40 w-full bg-zinc-100">
+              {/* Image header */}
+              <div className="relative aspect-[16/10] w-full bg-zinc-100">
                 {it.imageUrl ? (
                   <img
                     src={it.imageUrl}
@@ -99,51 +99,44 @@ export default function Menu({
                   <div className="h-full w-full" />
                 )}
 
-                {/* Price badge */}
-                <div className="absolute left-3 top-3 rounded-full border border-black/10 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-900 backdrop-blur">
+                <div className="absolute left-2 top-2 rounded-full border border-black/10 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-900 backdrop-blur">
                   {it.price} EGP
                 </div>
 
-                {/* Qty badge */}
                 {inCartQty > 0 ? (
-                  <div className="absolute right-3 top-3 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+                  <div className="absolute right-2 top-2 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
                     {t(lang, "qty")}: {inCartQty}
                   </div>
                 ) : null}
               </div>
 
-              {/* Content */}
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-base font-semibold">
-                      {name}
-                    </div>
-
-                    {desc ? (
-                      <div className="mt-1 line-clamp-2 text-sm text-zinc-600">
-                        {desc}
-                      </div>
-                    ) : (
-                      <div className="mt-1 text-sm text-zinc-400">
-                        {/* keep spacing consistent */}
-                        &nbsp;
-                      </div>
-                    )}
+              <div className="p-4 sm:p-5">
+                <div className="min-w-0">
+                  <div className="truncate text-sm sm:text-base font-semibold">
+                    {name}
                   </div>
+
+                  {desc ? (
+                    <div className="mt-1 line-clamp-2 text-xs sm:text-sm text-zinc-600">
+                      {desc}
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-xs sm:text-sm text-zinc-400">
+                      &nbsp;
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="mt-4 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => addToCart(it)}
-                    className="inline-flex items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white shadow-sm active:scale-[0.99]"
+                    className="inline-flex w-full sm:w-auto items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white shadow-sm active:scale-[0.99]"
                   >
                     {t(lang, "add")}
                   </button>
 
-                  {/* secondary info */}
-                  <div className="text-xs text-zinc-500">
+                  <div className="hidden sm:block text-xs text-zinc-500">
                     {inCartQty > 0 ? (
                       <span>
                         {t(lang, "qty")}:{" "}
@@ -162,7 +155,7 @@ export default function Menu({
         })}
 
         {filtered.length === 0 ? (
-          <div className="sm:col-span-2 rounded-3xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
+          <div className="col-span-2 lg:col-span-3 rounded-3xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
             No items in this category yet.
           </div>
         ) : null}
