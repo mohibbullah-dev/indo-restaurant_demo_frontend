@@ -253,7 +253,7 @@ export default function Menu({
               className="group overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition hover:shadow-md"
             >
               {/* ✅ Smaller image on small screens so 2-col fits nicely */}
-              <div className="relative h-28 w-full bg-zinc-100 sm:h-36">
+              <div className="relative h-28 w-full bg-zinc-100 sm:h-30">
                 {it.imageUrl ? (
                   <img
                     src={it.imageUrl}
