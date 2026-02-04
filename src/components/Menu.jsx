@@ -3,31 +3,58 @@ import { t } from "../i18n";
 
 export default function Menu({
   lang,
-  categories,
-  items,
+  categories = [],
+  items = [],
+  loading = false,
+  error = "",
   activeCategory,
   setActiveCategory,
   cart,
   addToCart,
 }) {
+  const safeCategories = useMemo(() => {
+    const all = { id: "all", name: { en: "All", id: "Semua", ar: "الكل" } };
+    return [all, ...categories];
+  }, [categories]);
+
   const filtered = useMemo(() => {
     if (activeCategory === "all") return items;
-    return items.filter((x) => x.category === activeCategory);
+    return items.filter((x) => x.categoryId === activeCategory);
   }, [activeCategory, items]);
 
+  if (loading) {
+    return (
+      <section className="rounded-3xl border border-black/10 bg-white p-5 shadow-sm">
+        <div className="text-sm font-semibold">Loading menu…</div>
+        <div className="mt-2 text-xs text-zinc-500">
+          Fetching items from Firestore.
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="rounded-3xl border border-rose-200 bg-rose-50 p-5 shadow-sm">
+        <div className="text-sm font-semibold text-rose-900">Menu error</div>
+        <div className="mt-2 text-xs text-rose-900">{error}</div>
+      </section>
+    );
+  }
+
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
       <div className="flex items-end justify-between">
         <div>
-          <div className="text-sm font-semibold">{t(lang, "menuTitle")}</div>
+          <div className="text-base font-semibold">{t(lang, "menuTitle")}</div>
           <div className="text-xs text-zinc-500">{t(lang, "categories")}</div>
         </div>
       </div>
 
       {/* Categories chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
-        {categories.map((c) => {
-          const label = c.name[lang] || c.name.en;
+        {safeCategories.map((c) => {
+          const label = c?.name?.[lang] || c?.name?.en || c.id;
           const active = activeCategory === c.id;
           return (
             <button
@@ -35,7 +62,7 @@ export default function Menu({
               onClick={() => setActiveCategory(c.id)}
               type="button"
               className={[
-                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition active:scale-[0.98]",
+                "shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition active:scale-[0.98]",
                 active
                   ? "bg-black text-white border-black"
                   : "bg-white border-black/10 text-zinc-700 hover:bg-black/5",
@@ -47,49 +74,98 @@ export default function Menu({
         })}
       </div>
 
-      {/* Items */}
-      <div className="space-y-3">
+      {/* Items: mobile = 1 col, desktop = 2 cols */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         {filtered.map((it) => {
-          const name = it.name[lang] || it.name.en;
-          const desc = it.desc?.[lang] || it.desc?.en || "";
+          const name = it?.name?.[lang] || it?.name?.en || it.id;
+          const desc = it?.desc?.[lang] || it?.desc?.en || "";
           const inCartQty = cart[it.id]?.qty || 0;
 
           return (
             <article
               key={it.id}
-              className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm"
+              className="group overflow-hidden rounded-3xl border border-black/10 bg-white shadow-sm transition hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{name}</div>
-                  {desc ? (
-                    <div className="mt-1 text-xs text-zinc-600">{desc}</div>
-                  ) : null}
-                  <div className="mt-2 text-sm font-semibold">
-                    {it.price} EGP
+              {/* Wide image header */}
+              <div className="relative h-40 w-full bg-zinc-100">
+                {it.imageUrl ? (
+                  <img
+                    src={it.imageUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="h-full w-full" />
+                )}
+
+                {/* Price badge */}
+                <div className="absolute left-3 top-3 rounded-full border border-black/10 bg-white/90 px-3 py-1 text-xs font-semibold text-zinc-900 backdrop-blur">
+                  {it.price} EGP
+                </div>
+
+                {/* Qty badge */}
+                {inCartQty > 0 ? (
+                  <div className="absolute right-3 top-3 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+                    {t(lang, "qty")}: {inCartQty}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Content */}
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-base font-semibold">
+                      {name}
+                    </div>
+
+                    {desc ? (
+                      <div className="mt-1 line-clamp-2 text-sm text-zinc-600">
+                        {desc}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-sm text-zinc-400">
+                        {/* keep spacing consistent */}
+                        &nbsp;
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="mt-4 flex items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => addToCart(it)}
-                    className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white active:scale-[0.98]"
+                    className="inline-flex items-center justify-center rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white shadow-sm active:scale-[0.99]"
                   >
                     {t(lang, "add")}
                   </button>
 
-                  {inCartQty > 0 ? (
-                    <div className="text-xs text-zinc-600">
-                      {t(lang, "qty")}:{" "}
-                      <span className="font-semibold">{inCartQty}</span>
-                    </div>
-                  ) : null}
+                  {/* secondary info */}
+                  <div className="text-xs text-zinc-500">
+                    {inCartQty > 0 ? (
+                      <span>
+                        {t(lang, "qty")}:{" "}
+                        <span className="font-semibold text-zinc-800">
+                          {inCartQty}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400"> </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </article>
           );
         })}
+
+        {filtered.length === 0 ? (
+          <div className="sm:col-span-2 rounded-3xl border border-black/10 bg-white p-5 text-sm text-zinc-600">
+            No items in this category yet.
+          </div>
+        ) : null}
       </div>
     </section>
   );

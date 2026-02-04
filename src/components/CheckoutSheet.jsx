@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { t } from "../i18n";
 import {
@@ -7,11 +7,79 @@ import {
   todayISODate,
 } from "../utils/time";
 import { db } from "../firebase";
+import { useToast } from "./ToastProvider";
 
 function buildWhatsAppLink({ phone, text }) {
   const safeText = encodeURIComponent(text);
   const base = phone ? `https://wa.me/${phone}` : "https://wa.me/";
   return `${base}?text=${safeText}`;
+}
+
+function ClockIcon({ className = "h-5 w-5" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M12 6v6l4 2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon({ className = "h-5 w-5" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        d="M8 2v3M16 2v3"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M3.5 9h17"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6.5 4.5h11A3 3 0 0 1 20.5 7.5v11A3 3 0 0 1 17.5 21.5h-11A3 3 0 0 1 3.5 18.5v-11A3 3 0 0 1 6.5 4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Try to open native picker if supported, otherwise just focus
+function focusAndTryPicker(inputEl) {
+  if (!inputEl) return;
+  inputEl.focus();
+  if (typeof inputEl.showPicker === "function") {
+    try {
+      inputEl.showPicker();
+    } catch {
+      // Some browsers block showPicker; focus is still helpful
+    }
+  }
 }
 
 export default function CheckoutSheet({
@@ -24,8 +92,10 @@ export default function CheckoutSheet({
   settings,
   onOrderCreated,
 }) {
-  const [date, setDate] = useState(todayISODate());
-  const [time, setTime] = useState("");
+  const toast = useToast();
+
+  const [date, setDate] = useState(todayISODate()); // YYYY-MM-DD
+  const [time, setTime] = useState(""); // "HH:MM"
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [customerWa, setCustomerWa] = useState("");
@@ -33,24 +103,42 @@ export default function CheckoutSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const dateRef = useRef(null);
+  const timeRef = useRef(null);
+
   const itemsArray = useMemo(() => Object.values(cart), [cart]);
-  const canSubmitBase = itemsArray.length > 0 && !!date && !!time;
+
+  // digits only for WhatsApp
+  const waClean = useMemo(() => customerWa.replace(/[^\d]/g, ""), [customerWa]);
+
+  // Required fields
+  const canSubmitBase = useMemo(() => {
+    return (
+      itemsArray.length > 0 &&
+      !!date &&
+      !!time &&
+      name.trim().length > 0 &&
+      waClean.length > 0
+    );
+  }, [itemsArray.length, date, time, name, waClean]);
 
   useEffect(() => {
     if (open) {
-      setCustomerWa("");
       setCopied(false);
       setSaving(false);
       setError("");
       setDate(todayISODate());
       setTime("");
+      setName("");
+      setNotes("");
+      setCustomerWa("");
     }
   }, [open]);
 
   const tooSoon = useMemo(() => {
-    if (!canSubmitBase) return false;
+    if (!date || !time) return false;
     return !isAtLeastMinutesFromNow(date, time, settings?.minLeadMinutes ?? 0);
-  }, [canSubmitBase, date, time, settings]);
+  }, [date, time, settings]);
 
   const canSubmit = canSubmitBase && !tooSoon && !saving;
 
@@ -59,17 +147,75 @@ export default function CheckoutSheet({
       await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
+      toast.push({
+        title: "Copied",
+        message: "Link copied to clipboard.",
+        variant: "default",
+      });
     } catch {
       // ignore
     }
   };
 
+  const validateRequired = () => {
+    if (itemsArray.length === 0) {
+      toast.push({
+        title: "Cart empty",
+        message: "Add items first.",
+        variant: "warning",
+      });
+      return false;
+    }
+    if (!date) {
+      toast.push({
+        title: "Missing date",
+        message: "Please choose a date.",
+        variant: "warning",
+      });
+      return false;
+    }
+    if (!time) {
+      toast.push({
+        title: "Missing time",
+        message: "Please choose a time.",
+        variant: "warning",
+      });
+      return false;
+    }
+    if (!name.trim()) {
+      toast.push({
+        title: "Name required",
+        message: "Please enter your name.",
+        variant: "warning",
+      });
+      return false;
+    }
+    if (!waClean) {
+      toast.push({
+        title: "WhatsApp required",
+        message: "Please enter your WhatsApp number (digits only).",
+        variant: "warning",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const placeOrder = async () => {
     setError("");
-    if (!canSubmitBase) return;
+
+    if (!validateRequired()) return;
 
     if (tooSoon) {
+      const mins = settings?.minLeadMinutes ?? 0;
       setError(t(lang, "tooSoon"));
+      toast.push({
+        title: t(lang, "tooSoon"),
+        message: mins
+          ? `Minimum lead time is ${mins} minutes.`
+          : "Please choose a later time.",
+        variant: "warning",
+      });
       return;
     }
 
@@ -78,19 +224,19 @@ export default function CheckoutSheet({
 
       const scheduledAtIso = buildLocalISO(date, time);
 
-      // Create a document reference FIRST to get orderId
+      // create doc first to get orderId
       const ref = doc(collection(db, "orders"));
       const orderId = ref.id;
 
       const trackUrl = `${window.location.origin}/order/${orderId}`;
 
-      // Build WhatsApp message including orderId + track link
+      // WhatsApp message to restaurant
       const lines = [];
       lines.push("🧾 NEW ORDER");
       lines.push(`🆔 Order ID: ${orderId}`);
       lines.push(`📅 Date: ${date}`);
       lines.push(`⏰ Time: ${time}`);
-      if (name.trim()) lines.push(`👤 Name: ${name.trim()}`);
+      lines.push(`👤 Name: ${name.trim()}`);
       if (notes.trim()) lines.push(`📝 Notes: ${notes.trim()}`);
       lines.push("");
       lines.push("Items:");
@@ -109,14 +255,14 @@ export default function CheckoutSheet({
         phone: restaurantWhatsAppNumber,
         text: orderText,
       });
-      const waClean = customerWa.replace(/[^\d]/g, "");
+
       const payload = {
         id: orderId,
         channel: "whatsapp",
         customer: {
-          name: name.trim() || null,
+          name: name.trim(),
           notes: notes.trim() || null,
-          whatsapp: waClean || null,
+          whatsapp: waClean,
         },
         items: itemsArray.map((x) => ({
           id: x.id,
@@ -146,11 +292,15 @@ export default function CheckoutSheet({
 
       onOrderCreated?.({ ...payload });
 
-      // Open WhatsApp immediately
       window.open(waLink, "_blank", "noopener,noreferrer");
     } catch (e) {
       console.error(e);
       setError("Failed to save order. Check Firestore rules / config.");
+      toast.push({
+        title: "Failed to save",
+        message: "Please try again.",
+        variant: "danger",
+      });
     } finally {
       setSaving(false);
     }
@@ -160,16 +310,30 @@ export default function CheckoutSheet({
 
   return (
     <div className="fixed inset-0 z-40">
-      <button
-        type="button"
+      {/* Hide native picker icons (Chrome/Edge) so we don't get double icons */}
+      <style>{`
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          display: none;
+        }
+        input[type="date"], input[type="time"] { appearance: none; }
+      `}</style>
+
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/30 z-0"
         onClick={onClose}
-        className="absolute inset-0 bg-black/30"
-        aria-label="Close"
+        aria-hidden="true"
       />
 
-      <div className="absolute bottom-0 left-0 right-0">
+      {/* Sheet */}
+      <div className="absolute bottom-0 left-0 right-0 z-10">
         <div className="mx-auto w-full max-w-5xl px-3 pb-[max(12px,env(safe-area-inset-bottom))]">
-          <div className="rounded-t-3xl border border-black/10 bg-white shadow-xl">
+          <div
+            className="rounded-t-3xl border border-black/10 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-center pt-3">
               <div className="h-1.5 w-12 rounded-full bg-black/10" />
             </div>
@@ -189,41 +353,82 @@ export default function CheckoutSheet({
 
             <div className="px-4 pb-4">
               <div className="grid gap-3 sm:grid-cols-2">
+                {/* Date with single icon */}
                 <label className="grid gap-1">
                   <span className="text-xs font-semibold text-zinc-700">
                     {t(lang, "date")}
                   </span>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
-                  />
+
+                  <div
+                    className="relative"
+                    onMouseDown={() => focusAndTryPicker(dateRef.current)}
+                    onTouchStart={() => focusAndTryPicker(dateRef.current)}
+                  >
+                    <input
+                      ref={dateRef}
+                      type="date"
+                      value={date}
+                      min={todayISODate()}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-black/30"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => focusAndTryPicker(dateRef.current)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-black/10 bg-white p-2 text-zinc-700 active:scale-[0.98]"
+                      aria-label="Pick date"
+                      title="Pick date"
+                    >
+                      <CalendarIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </label>
 
+                {/* Time with single icon */}
                 <label className="grid gap-1">
                   <span className="text-xs font-semibold text-zinc-700">
                     {t(lang, "time")}
                   </span>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
-                  />
+
+                  <div
+                    className="relative"
+                    onMouseDown={() => focusAndTryPicker(timeRef.current)}
+                    onTouchStart={() => focusAndTryPicker(timeRef.current)}
+                  >
+                    <input
+                      ref={timeRef}
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      step={300}
+                      className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-black/30"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => focusAndTryPicker(timeRef.current)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-black/10 bg-white p-2 text-zinc-700 active:scale-[0.98]"
+                      aria-label="Pick time"
+                      title="Pick time"
+                    >
+                      <ClockIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </label>
               </div>
 
               <div className="mt-4 grid gap-3">
                 <label className="grid gap-1">
                   <span className="text-xs font-semibold text-zinc-700">
-                    {t(lang, "nameOptional")}
+                    Name <span className="text-rose-600">*</span>
                   </span>
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
-                    placeholder={t(lang, "nameOptional")}
+                    placeholder="Your name"
+                    required
                   />
                 </label>
 
@@ -241,7 +446,8 @@ export default function CheckoutSheet({
 
                 <label className="grid gap-1">
                   <span className="text-xs font-semibold text-zinc-700">
-                    {t(lang, "customerWhatsApp")}
+                    {t(lang, "customerWhatsApp")}{" "}
+                    <span className="text-rose-600">*</span>
                   </span>
                   <input
                     value={customerWa}
@@ -249,7 +455,11 @@ export default function CheckoutSheet({
                     className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/30"
                     placeholder="201234567890"
                     inputMode="numeric"
+                    required
                   />
+                  <div className="text-[11px] text-zinc-500">
+                    Digits only (no +, no spaces). Example: 201234567890
+                  </div>
                 </label>
               </div>
 

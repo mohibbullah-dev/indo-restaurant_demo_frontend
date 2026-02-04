@@ -12,6 +12,9 @@ import {
 } from "firebase/firestore";
 import { t } from "../i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useToast } from "../components/ToastProvider";
+import AdminMenu from "./AdminMenu";
+import { Link } from "react-router-dom";
 
 function StatusLabel({ status, lang }) {
   const map = {
@@ -58,6 +61,7 @@ export default function AdminDashboard({ lang, setLang }) {
     isOpen: true,
     acceptingOrders: true,
   });
+  const toast = useToast();
 
   const [selectedId, setSelectedId] = useState(null);
 
@@ -95,16 +99,34 @@ export default function AdminDashboard({ lang, setLang }) {
       for (const o of list) {
         if (!prevIdsRef.current.has(o.id) && o.status === "pending") {
           hasNewPending = true;
+
           break;
         }
       }
       prevIdsRef.current = currentIds;
-      if (hasNewPending) beep();
+      if (hasNewPending) {
+        beep();
+        toast.push({
+          title: t(lang, "newOrder"),
+          message: "New pending order arrived.",
+          variant: "success",
+          actionLabel: "Open orders",
+          onAction: () => {
+            setTab("orders");
+            setSelectedId(null);
+          },
+        });
+      }
     });
   }, []);
 
   const setOrderStatus = async (id, status) => {
     await updateDoc(doc(db, "orders", id), { status });
+    toast.push({
+      title: "Status updated",
+      message: `Order ${id} → ${status}`,
+      variant: "default",
+    });
   };
 
   const toggleSetting = async (key) => {
@@ -172,6 +194,20 @@ export default function AdminDashboard({ lang, setLang }) {
               >
                 {t(lang, "orders")}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setTab("menu")}
+                className={[
+                  "rounded-full px-4 py-2 text-sm font-semibold",
+                  tab === "menu"
+                    ? "bg-black text-white"
+                    : "bg-black/10 text-zinc-800",
+                ].join(" ")}
+              >
+                Menu
+              </button>
+
               <button
                 type="button"
                 onClick={() => setTab("settings")}
@@ -188,7 +224,16 @@ export default function AdminDashboard({ lang, setLang }) {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Back to Home */}
+            <Link
+              to="/"
+              className="rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-black/5 active:scale-[0.98]"
+            >
+              Home
+            </Link>
+
             <LanguageSwitcher lang={lang} setLang={setLang} />
+
             <button
               type="button"
               onClick={() => signOut(auth)}
@@ -303,6 +348,8 @@ export default function AdminDashboard({ lang, setLang }) {
                   </button>
                 </div>
               </div>
+            ) : tab === "menu" ? (
+              <AdminMenu lang={lang} />
             ) : (
               <>
                 {/* Mobile filter chips */}
@@ -386,6 +433,18 @@ export default function AdminDashboard({ lang, setLang }) {
           >
             {t(lang, "orders")}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("menu")}
+            className={[
+              "rounded-full px-4 py-2 text-sm font-semibold",
+              tab === "menu" ? "bg-black text-white" : "text-zinc-700",
+            ].join(" ")}
+          >
+            Menu
+          </button>
+
           <button
             type="button"
             onClick={() => setTab("settings")}
@@ -525,6 +584,23 @@ export default function AdminDashboard({ lang, setLang }) {
                     ].join(" ")}
                   >
                     {t(lang, "openWhatsApp")}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!replyLink || selectedOrder.status !== "ready"}
+                    onClick={() =>
+                      replyLink &&
+                      window.open(replyLink, "_blank", "noopener,noreferrer")
+                    }
+                    className={[
+                      "mt-2 w-full rounded-2xl px-4 py-3 text-sm font-semibold active:scale-[0.99]",
+                      replyLink && selectedOrder.status === "ready"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-emerald-600/20 text-white/70",
+                    ].join(" ")}
+                  >
+                    Notify customer (Ready)
                   </button>
                 </div>
               </div>

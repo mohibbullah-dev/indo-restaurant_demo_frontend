@@ -8,12 +8,22 @@ import Home from "./pages/Home";
 import OrderPage from "./pages/OrderPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import { useFirestoreMenu } from "./hooks/useFirestoreMenu";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   // Global language (shared customer/admin)
   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "id");
   const rtl = useMemo(() => isRtl(lang), [lang]);
+
+  // Firestore menu data (customer)
+  const {
+    categories,
+    items,
+    loading: menuLoading,
+    error: menuError,
+  } = useFirestoreMenu({ onlyActive: true });
 
   useEffect(() => {
     localStorage.setItem("lang", lang);
@@ -23,7 +33,6 @@ export default function App() {
 
   // Auth state
   const [user, setUser] = useState(null);
-
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsub();
@@ -31,7 +40,20 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Home lang={lang} setLang={setLang} />} />
+      <Route
+        path="/"
+        element={
+          <Home
+            lang={lang}
+            setLang={setLang}
+            categories={categories}
+            items={items}
+            menuLoading={menuLoading}
+            menuError={menuError}
+          />
+        }
+      />
+
       <Route path="/order/:orderId" element={<OrderPage />} />
 
       <Route path="/admin/login" element={<AdminLogin lang={lang} />} />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "../components/ToastProvider";
 import {
   doc,
   onSnapshot,
@@ -20,6 +21,8 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const toast = useToast();
+  const [prevStatus, setPrevStatus] = useState(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -35,7 +38,28 @@ export default function OrderPage() {
           return;
         }
         setErr("");
-        setOrder({ id: snap.id, ...snap.data() });
+        const next = { id: snap.id, ...snap.data() };
+        setOrder(next);
+
+        // Toast when status changes to ready
+        const nextStatus = next?.status || null;
+        if (prevStatus && nextStatus && prevStatus !== nextStatus) {
+          if (nextStatus === "ready") {
+            toast.push({
+              title: "Order is ready ✅",
+              message: "You can pick it up now.",
+              variant: "success",
+            });
+          }
+          if (nextStatus === "cancelled") {
+            toast.push({
+              title: "Order cancelled",
+              message: "This order has been cancelled.",
+              variant: "warning",
+            });
+          }
+        }
+        setPrevStatus(nextStatus);
       },
       (e) => {
         console.error(e);
@@ -59,6 +83,11 @@ export default function OrderPage() {
       await updateDoc(ref, {
         status: "cancelled",
         cancelledAt: serverTimestamp(),
+      });
+      toast.push({
+        title: "Order cancelled",
+        message: "Your order has been cancelled.",
+        variant: "warning",
       });
     } catch (e) {
       console.error(e);
