@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { Link } from "react-router-dom";
 
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import Menu from "../components/Menu";
@@ -7,11 +9,8 @@ import CartBar from "../components/CartBar";
 import CheckoutSheet from "../components/CheckoutSheet";
 
 import { t } from "../i18n";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { useToast } from "../components/ToastProvider";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
-import { Link } from "react-router-dom";
 
 export default function Home({
   lang,
@@ -31,68 +30,51 @@ export default function Home({
 
   const toast = useToast();
   const [adminUser, setAdminUser] = useState(null);
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [cart, setCart] = useState({});
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
+  // Sync Auth
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setAdminUser(u);
-    });
+    const unsub = onAuthStateChanged(auth, (u) => setAdminUser(u));
     return () => unsub();
   }, []);
 
+  // Sync Settings
   useEffect(() => {
     const ref = doc(db, "settings", "main");
     const unsub = onSnapshot(ref, (snap) => {
-      if (snap.exists()) {
-        setSettings((prev) => ({ ...prev, ...snap.data() }));
-      }
+      if (snap.exists()) setSettings((prev) => ({ ...prev, ...snap.data() }));
     });
     return () => unsub();
   }, []);
 
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [cart, setCart] = useState({});
-
-  useEffect(() => {
-    if (activeCategory === "all") return;
-    const exists = categories.some((c) => c.id === activeCategory);
-    if (!exists) setActiveCategory("all");
-  }, [categories, activeCategory]);
-
+  // Cart Logic
   const addToCart = (item) => {
     setCart((prev) => {
       const existing = prev[item.id];
       const qty = (existing?.qty || 0) + 1;
       return {
         ...prev,
-        [item.id]: {
-          ...item,
-          id: item.id,
-          price: item.price,
-          qty,
-          name: item.name,
-        },
+        [item.id]: { ...item, qty },
       };
     });
   };
 
   const clearCart = () => setCart({});
-
   const cartCount = Object.values(cart).reduce((s, x) => s + x.qty, 0);
   const total = Object.values(cart).reduce((s, x) => s + x.qty * x.price, 0);
 
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-
   const restaurantWa =
     settings.restaurantWhatsAppNumber || settings.restaurantWa || "";
-
   const canCheckout =
     cartCount > 0 && settings.isOpen && settings.acceptingOrders;
 
   const onCheckout = () => {
     if (!canCheckout) {
       toast.push({
-        title: "Ordering unavailable",
-        message: "Restaurant is closed or not accepting orders right now.",
+        title: t(lang, "error") || "Unavailable",
+        message: "Restaurant is not accepting orders right now.",
         variant: "warning",
       });
       return;
@@ -100,100 +82,100 @@ export default function Home({
     setCheckoutOpen(true);
   };
 
-  const onOrderCreated = () => {
-    clearCart();
-    setCheckoutOpen(false);
-    toast.push({
-      title: "Order created",
-      message: "WhatsApp opened with your order details.",
-      variant: "success",
-    });
-  };
-
   return (
-    <div className="min-h-dvh bg-zinc-50 text-zinc-900 overflow-x-hidden">
-      <header className="sticky top-0 z-20 border-b border-black/5 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-3 py-3 sm:px-4">
+    <div className="min-h-screen bg-surface-50 text-slate-900 selection:bg-brand-primary/10">
+      {/* Premium Sticky Header */}
+      <header className="sticky top-0 z-30 border-b border-black/5 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex flex-col">
-            <span className="text-base font-semibold leading-tight">
+            <h1 className="text-lg font-black tracking-tight">
               {t(lang, "brand")}
+            </h1>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {t(lang, "subtitle")}
             </span>
-            <span className="text-xs text-zinc-500">{t(lang, "subtitle")}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            {adminUser ? (
+            {adminUser && (
               <Link
                 to="/admin"
-                className="rounded-full border border-black/10 bg-black px-3 py-2 text-xs font-semibold text-white hover:bg-black/90 sm:px-4"
+                className="hidden items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-brand-primary sm:flex"
               >
                 Admin
               </Link>
-            ) : null}
-
+            )}
             <LanguageSwitcher lang={lang} setLang={setLang} />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl px-3 pb-28 pt-4 sm:px-4">
-        <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-          <div className="space-y-4">
+      <main className="mx-auto max-w-6xl px-4 pb-32 pt-6">
+        <div className="grid gap-8 lg:grid-cols-[320px_1fr]">
+          {/* Sidebar: Status & Fast Actions */}
+          <aside className="space-y-4">
             <section
-              className={[
-                "rounded-3xl p-4 shadow-sm border bg-white",
-                settings.isOpen ? "border-emerald-200" : "border-rose-200",
-              ].join(" ")}
+              className={`overflow-hidden rounded-[2rem] border bg-white p-6 shadow-sm transition-all ${
+                settings.isOpen ? "border-emerald-100" : "border-rose-100"
+              }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={[
-                      "h-3 w-3 rounded-full",
-                      settings.isOpen ? "bg-emerald-500" : "bg-rose-500",
-                    ].join(" ")}
-                    aria-hidden="true"
+              <div className="flex items-center gap-4">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                    settings.isOpen
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-rose-50 text-rose-600"
+                  }`}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full animate-pulse ${
+                      settings.isOpen ? "bg-emerald-500" : "bg-rose-500"
+                    }`}
                   />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold">
-                      {settings.isOpen ? t(lang, "open") : t(lang, "closed")}
-                    </span>
-                    <span className="text-xs text-zinc-600">
-                      {settings.isOpen
-                        ? t(lang, "openNow")
-                        : t(lang, "closedNow")}
-                    </span>
-                  </div>
                 </div>
-
-                <span className="rounded-full border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-zinc-700">
-                  {settings.acceptingOrders ? "ON" : "OFF"}
-                </span>
+                <div>
+                  <h2 className="text-sm font-black">
+                    {settings.isOpen ? t(lang, "open") : t(lang, "closed")}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {settings.isOpen
+                      ? t(lang, "openNow")
+                      : t(lang, "closedNow")}
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-3 text-xs text-zinc-500">
-                Lead time:{" "}
-                <span className="font-semibold">
-                  {settings.minLeadMinutes ?? 0} min
-                </span>
-                {" • "}
-                TZ:{" "}
-                <span className="font-semibold">
-                  {settings.timezone || "Africa/Cairo"}
-                </span>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <div className="flex-1 rounded-2xl bg-slate-50 p-3 text-center">
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">
+                    Lead Time
+                  </p>
+                  <p className="text-xs font-black">
+                    {settings.minLeadMinutes}m
+                  </p>
+                </div>
+                <div className="flex-1 rounded-2xl bg-slate-50 p-3 text-center">
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-tighter">
+                    Orders
+                  </p>
+                  <p
+                    className={`text-xs font-black ${settings.acceptingOrders ? "text-emerald-600" : "text-rose-600"}`}
+                  >
+                    {settings.acceptingOrders ? "ON" : "OFF"}
+                  </p>
+                </div>
               </div>
             </section>
 
-            <section className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
               <button
                 type="button"
-                className="rounded-3xl bg-black px-4 py-4 text-sm font-semibold text-white shadow-sm active:scale-[0.99]"
-                onClick={() => {
-                  document.getElementById("menuSection")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
+                className="rounded-3xl bg-slate-900 py-4 text-sm font-black text-white shadow-lg shadow-slate-200 active:scale-95 transition-all"
+                onClick={() =>
+                  document
+                    .getElementById("menuSection")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
               >
                 {t(lang, "viewMenu")}
               </button>
@@ -202,47 +184,19 @@ export default function Home({
                 type="button"
                 onClick={onCheckout}
                 disabled={!canCheckout}
-                className={[
-                  "rounded-3xl px-4 py-4 text-sm font-semibold shadow-sm active:scale-[0.99]",
+                className={`rounded-3xl border py-4 text-sm font-black active:scale-95 transition-all ${
                   canCheckout
-                    ? "border border-black/10 bg-white text-zinc-900"
-                    : "border border-black/10 bg-white text-zinc-400",
-                ].join(" ")}
+                    ? "border-slate-200 bg-white text-slate-900 shadow-sm"
+                    : "bg-slate-50 text-slate-300"
+                }`}
               >
                 {t(lang, "checkout")}
               </button>
-            </section>
+            </div>
+          </aside>
 
-            {!settings.isOpen || !settings.acceptingOrders ? (
-              <section className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
-                <div className="text-sm font-semibold">Notice</div>
-                <div className="mt-1 text-xs text-amber-900">
-                  Ordering is currently disabled (closed or not accepting
-                  orders).
-                </div>
-              </section>
-            ) : null}
-
-            {menuLoading ? (
-              <section className="rounded-3xl border border-black/10 bg-white p-4">
-                <div className="text-sm font-semibold">Loading menu…</div>
-                <div className="mt-1 text-xs text-zinc-500">
-                  Fetching categories and items.
-                </div>
-              </section>
-            ) : null}
-
-            {menuError ? (
-              <section className="rounded-3xl border border-rose-200 bg-rose-50 p-4">
-                <div className="text-sm font-semibold text-rose-900">
-                  Menu error
-                </div>
-                <div className="mt-1 text-xs text-rose-900">{menuError}</div>
-              </section>
-            ) : null}
-          </div>
-
-          <div className="space-y-4" id="menuSection">
+          {/* Menu Area */}
+          <div id="menuSection" className="scroll-mt-24">
             <Menu
               lang={lang}
               categories={categories}
@@ -274,10 +228,8 @@ export default function Home({
         total={total}
         restaurantWhatsAppNumber={restaurantWa}
         settings={settings}
-        onOrderCreated={onOrderCreated}
+        onOrderCreated={clearCart}
       />
-
-      <div className="fixed bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-zinc-50 to-transparent" />
     </div>
   );
 }

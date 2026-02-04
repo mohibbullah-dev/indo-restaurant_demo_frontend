@@ -1,6 +1,40 @@
 @import "tailwindcss";
-html,
-body {
-  max-width: 100%;
-  overflow-x: hidden;
+
+@theme {
+  /* Brand Colors - Sophisticated & High-Contrast */
+  --color-brand-primary: #ea580c; /* High-energy Orange for Food */
+  --color-brand-secondary: #1e293b; /* Deep Slate for Text/Admin */
+
+  /* Modern Surface Colors */
+  --color-surface-50: #f8fafc;
+  --color-surface-100: #f1f5f9;
+
+  /* Custom Viewports for 100% Responsiveness */
+  --breakpoint-xs: 320px;
+}
+
+/* Global Smooth Transitions & Resets */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-50 text-slate-900 antialiased;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Support for Arabic Typography */
+  [dir="rtl"] {
+    font-family: "Inter", "Noto Sans Arabic", sans-serif;
+  }
+}
+
+/* Custom Utility for Mobile-First Bottom Sheets */
+@utility bottom-sheet-shadow {
+  box-shadow:
+    0 -10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 -8px 10px -6px rgba(0, 0, 0, 0.1);
 }
