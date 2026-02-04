@@ -9,15 +9,14 @@
 // import AdminLogin from "./pages/AdminLogin";
 // import AdminDashboard from "./pages/AdminDashboard";
 // import { useFirestoreMenu } from "./hooks/useFirestoreMenu";
-
 // import ProtectedRoute from "./components/ProtectedRoute";
 
 // export default function App() {
-//   // Global language (shared customer/admin)
+//   // Global language state
 //   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "id");
 //   const rtl = useMemo(() => isRtl(lang), [lang]);
 
-//   // Firestore menu data (customer)
+//   // Firestore menu data
 //   const {
 //     categories,
 //     items,
@@ -25,10 +24,15 @@
 //     error: menuError,
 //   } = useFirestoreMenu({ onlyActive: true });
 
+//   // Sync Language & RTL Attributes
 //   useEffect(() => {
 //     localStorage.setItem("lang", lang);
-//     document.documentElement.lang = lang;
-//     document.documentElement.dir = rtl ? "rtl" : "ltr";
+//     const html = document.documentElement;
+//     html.lang = lang;
+//     html.dir = rtl ? "rtl" : "ltr";
+
+//     // Smooth transition when switching languages
+//     html.classList.add("duration-300");
 //   }, [lang, rtl]);
 
 //   // Auth state
@@ -39,33 +43,38 @@
 //   }, []);
 
 //   return (
-//     <Routes>
-//       <Route
-//         path="/"
-//         element={
-//           <Home
-//             lang={lang}
-//             setLang={setLang}
-//             categories={categories}
-//             items={items}
-//             menuLoading={menuLoading}
-//             menuError={menuError}
+//     <div className="min-h-screen w-full flex flex-col">
+//       <main className="flex-grow">
+//         <Routes>
+//           <Route
+//             path="/"
+//             element={
+//               <Home
+//                 lang={lang}
+//                 setLang={setLang}
+//                 categories={categories}
+//                 items={items}
+//                 menuLoading={menuLoading}
+//                 menuError={menuError}
+//               />
+//             }
 //           />
-//         }
-//       />
 
-//       <Route path="/order/:orderId" element={<OrderPage />} />
+//           <Route path="/order/:orderId" element={<OrderPage />} />
 
-//       <Route path="/admin/login" element={<AdminLogin lang={lang} />} />
-//       <Route
-//         path="/admin"
-//         element={
-//           <ProtectedRoute user={user}>
-//             <AdminDashboard lang={lang} setLang={setLang} />
-//           </ProtectedRoute>
-//         }
-//       />
-//     </Routes>
+//           <Route path="/admin/login" element={<AdminLogin lang={lang} />} />
+
+//           <Route
+//             path="/admin/*"
+//             element={
+//               <ProtectedRoute user={user}>
+//                 <AdminDashboard lang={lang} setLang={setLang} />
+//               </ProtectedRoute>
+//             }
+//           />
+//         </Routes>
+//       </main>
+//     </div>
 //   );
 // }
 
@@ -95,15 +104,24 @@ export default function App() {
     error: menuError,
   } = useFirestoreMenu({ onlyActive: true });
 
-  // Sync Language & RTL Attributes
+  // Sync Language & Viewport Behavior
   useEffect(() => {
     localStorage.setItem("lang", lang);
     const html = document.documentElement;
     html.lang = lang;
     html.dir = rtl ? "rtl" : "ltr";
 
-    // Smooth transition when switching languages
-    html.classList.add("duration-300");
+    // Prevent elastic bouncing on mobile browsers (App feel)
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100%";
+
+    html.classList.add(
+      "antialiased",
+      "selection:bg-zinc-900",
+      "selection:text-white",
+    );
   }, [lang, rtl]);
 
   // Auth state
@@ -114,8 +132,15 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full flex flex-col">
-      <main className="flex-grow">
+    /**
+     * MOBILE APP CONTAINER
+     * - h-dvh: Uses the dynamic viewport height (handles mobile browser bars)
+     * - select-none: Prevents accidental text selection while tapping
+     * - touch-manipulation: Removes double-tap zoom delay
+     */
+    <div className="h-dvh w-full flex flex-col bg-zinc-50 overflow-hidden select-none touch-manipulation font-sans">
+      {/* Scrollable Area */}
+      <main className="flex-grow overflow-y-auto overflow-x-hidden scroll-smooth pb-safe">
         <Routes>
           <Route
             path="/"
@@ -145,6 +170,8 @@ export default function App() {
           />
         </Routes>
       </main>
+
+      {/* Note: If you add a Navigation Bar later, it should sit here outside <main> */}
     </div>
   );
 }
