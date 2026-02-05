@@ -610,6 +610,376 @@
 //   );
 // }
 
+// import { useEffect, useMemo, useRef, useState } from "react";
+// import { signOut } from "firebase/auth";
+// import { auth, db } from "../firebase";
+// import {
+//   collection,
+//   doc,
+//   limit,
+//   onSnapshot,
+//   orderBy,
+//   query,
+//   updateDoc,
+// } from "firebase/firestore";
+// import { t } from "../i18n";
+// import LanguageSwitcher from "../components/LanguageSwitcher";
+// import { useToast } from "../components/ToastProvider";
+// import AdminMenu from "./AdminMenu";
+// import { Link } from "react-router-dom";
+
+// // Optimized Icons for Mobile (Simplified Strokes)
+// const OrderIcon = () => (
+//   <svg
+//     className="w-5 h-5"
+//     fill="none"
+//     viewBox="0 0 24 24"
+//     stroke="currentColor"
+//   >
+//     <path
+//       strokeLinecap="round"
+//       strokeLinejoin="round"
+//       strokeWidth={2.5}
+//       d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+//     />
+//   </svg>
+// );
+// const MenuIcon = () => (
+//   <svg
+//     className="w-5 h-5"
+//     fill="none"
+//     viewBox="0 0 24 24"
+//     stroke="currentColor"
+//   >
+//     <path
+//       strokeLinecap="round"
+//       strokeLinejoin="round"
+//       strokeWidth={2.5}
+//       d="M4 6h16M4 12h16M4 18h7"
+//     />
+//   </svg>
+// );
+// const SettingsIcon = () => (
+//   <svg
+//     className="w-5 h-5"
+//     fill="none"
+//     viewBox="0 0 24 24"
+//     stroke="currentColor"
+//   >
+//     <path
+//       strokeLinecap="round"
+//       strokeLinejoin="round"
+//       strokeWidth={2.5}
+//       d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+//     />
+//     <circle cx="12" cy="12" r="3" strokeWidth={2.5} />
+//   </svg>
+// );
+
+// function StatusLabel({ status, lang }) {
+//   const map = {
+//     pending: t(lang, "pending"),
+//     preparing: t(lang, "preparing"),
+//     ready: t(lang, "ready"),
+//     cancelled: t(lang, "cancelled"),
+//   };
+//   return map[status] || status || "—";
+// }
+
+// export default function AdminDashboard({ lang, setLang }) {
+//   const [tab, setTab] = useState("orders");
+//   const [filter, setFilter] = useState("all");
+//   const [orders, setOrders] = useState([]);
+//   const [settings, setSettings] = useState({
+//     isOpen: true,
+//     acceptingOrders: true,
+//   });
+//   const [selectedId, setSelectedId] = useState(null);
+//   const toast = useToast();
+
+//   // Listen for Orders
+//   useEffect(() => {
+//     const q = query(
+//       collection(db, "orders"),
+//       orderBy("createdAt", "desc"),
+//       limit(50),
+//     );
+//     return onSnapshot(q, (snap) => {
+//       setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+//     });
+//   }, []);
+
+//   // Listen for Settings
+//   useEffect(() => {
+//     return onSnapshot(doc(db, "settings", "main"), (snap) => {
+//       if (snap.exists()) setSettings(snap.data());
+//     });
+//   }, []);
+
+//   const setOrderStatus = async (id, status) => {
+//     await updateDoc(doc(db, "orders", id), { status });
+//     toast.push({
+//       title: "Status updated",
+//       message: `Order → ${status}`,
+//       variant: "default",
+//     });
+//   };
+
+//   const toggleSetting = async (key) => {
+//     await updateDoc(doc(db, "settings", "main"), { [key]: !settings[key] });
+//   };
+
+//   const filteredOrders = useMemo(() => {
+//     return filter === "all"
+//       ? orders
+//       : orders.filter((o) => o.status === filter);
+//   }, [orders, filter]);
+
+//   const selectedOrder = useMemo(
+//     () => orders.find((o) => o.id === selectedId),
+//     [orders, selectedId],
+//   );
+
+//   return (
+//     <div className="flex flex-col h-full bg-zinc-50 font-sans select-none">
+//       {/* MOBILE HEADER: Clean & Compact */}
+//       <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-zinc-100 px-5 py-4 flex items-center justify-between sticky top-0 z-20">
+//         <div>
+//           <h1 className="text-lg font-black tracking-tighter uppercase leading-none">
+//             Admin
+//           </h1>
+//           <div className="flex items-center gap-1.5 mt-1">
+//             <div
+//               className={`h-1.5 w-1.5 rounded-full ${settings.isOpen ? "bg-emerald-500" : "bg-rose-500"}`}
+//             />
+//             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+//               {settings.isOpen ? "Live" : "Closed"}
+//             </span>
+//           </div>
+//         </div>
+//         <div className="flex items-center gap-2">
+//           <LanguageSwitcher lang={lang} setLang={setLang} />
+
+//           {/* Add this Link button */}
+//           <Link
+//             to="/"
+//             className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors"
+//             title="Go to Home"
+//           >
+//             <span className="text-xs">🏠</span>
+//           </Link>
+
+//           <button
+//             onClick={() => signOut(auth)}
+//             className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full"
+//           >
+//             <span className="text-xs">🚪</span>
+//           </button>
+//         </div>
+//       </header>
+
+//       {/* SCROLLABLE CONTENT AREA */}
+//       <main className="flex-1 overflow-y-auto pb-32 pt-4 px-4">
+//         {tab === "orders" && (
+//           <div className="space-y-4">
+//             {/* Status Pills: Swipeable horizontal menu */}
+//             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+//               {["all", "pending", "preparing", "ready", "cancelled"].map(
+//                 (k) => (
+//                   <button
+//                     key={k}
+//                     onClick={() => setFilter(k)}
+//                     className={`shrink-0 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-tight transition-all active:scale-90 ${
+//                       filter === k
+//                         ? "bg-zinc-900 text-white shadow-lg"
+//                         : "bg-white text-zinc-500 border border-zinc-100"
+//                     }`}
+//                   >
+//                     {k === "all" ? (
+//                       "All"
+//                     ) : (
+//                       <StatusLabel status={k} lang={lang} />
+//                     )}
+//                   </button>
+//                 ),
+//               )}
+//             </div>
+
+//             {/* Order Cards */}
+//             <div className="grid gap-3">
+//               {filteredOrders.map((o) => (
+//                 <button
+//                   key={o.id}
+//                   onClick={() => setSelectedId(o.id)}
+//                   className="w-full text-left bg-white rounded-3xl p-5 border border-zinc-100 active:bg-zinc-50 transition-colors shadow-sm relative overflow-hidden"
+//                 >
+//                   <div className="flex justify-between items-start">
+//                     <div className="space-y-0.5">
+//                       <p className="text-[10px] font-mono font-bold text-zinc-400">
+//                         #{o.id.slice(-5).toUpperCase()}
+//                       </p>
+//                       <h4 className="text-base font-black text-zinc-900">
+//                         {o?.customer?.name || "Guest"}
+//                       </h4>
+//                       <p className="text-[11px] font-bold text-zinc-500 uppercase">
+//                         {o?.scheduled?.time} • {o.total} EGP
+//                       </p>
+//                     </div>
+//                     <div
+//                       className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border ${
+//                         o.status === "pending"
+//                           ? "bg-amber-50 border-amber-200 text-amber-700 animate-pulse"
+//                           : "bg-zinc-50 border-zinc-200 text-zinc-500"
+//                       }`}
+//                     >
+//                       <StatusLabel status={o.status} lang={lang} />
+//                     </div>
+//                   </div>
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+//         )}
+
+//         {tab === "menu" && <AdminMenu lang={lang} />}
+
+//         {tab === "settings" && (
+//           <div className="space-y-4">
+//             <h2 className="text-sm font-black text-zinc-400 uppercase tracking-widest ml-2">
+//               Store Management
+//             </h2>
+//             <div className="grid gap-3">
+//               {[
+//                 {
+//                   key: "isOpen",
+//                   label: "Store Status",
+//                   val: settings.isOpen ? "OPEN" : "CLOSED",
+//                 },
+//                 {
+//                   key: "acceptingOrders",
+//                   label: "Orders",
+//                   val: settings.acceptingOrders ? "ACTIVE" : "PAUSED",
+//                 },
+//               ].map((s) => (
+//                 <button
+//                   key={s.key}
+//                   onClick={() => toggleSetting(s.key)}
+//                   className="flex items-center justify-between p-6 bg-white rounded-[2.5rem] border border-zinc-100 active:scale-95 transition-all"
+//                 >
+//                   <span className="font-black text-zinc-800">{s.label}</span>
+//                   <span
+//                     className={`text-[10px] font-black px-3 py-1.5 rounded-full ${s.val === "OPEN" || s.val === "ACTIVE" ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500"}`}
+//                   >
+//                     {s.val}
+//                   </span>
+//                 </button>
+//               ))}
+//             </div>
+//           </div>
+//         )}
+//       </main>
+
+//       {/* ORDER DETAILS: Slide-up Bottom Sheet (Very Mobile-App style) */}
+//       {selectedOrder && (
+//         <div className="fixed inset-0 z-50 flex items-end">
+//           <div
+//             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+//             onClick={() => setSelectedId(null)}
+//           />
+//           <div className="relative w-full bg-white rounded-t-[3rem] max-h-[90dvh] overflow-y-auto flex flex-col p-8 animate-in slide-in-from-bottom duration-300">
+//             <div className="w-12 h-1.5 bg-zinc-200 rounded-full self-center mb-6" />
+
+//             <div className="mb-6">
+//               <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
+//                 Customer
+//               </p>
+//               <h3 className="text-2xl font-black">
+//                 {selectedOrder.customer?.name}
+//               </h3>
+//               <p className="text-sm font-bold text-zinc-500">
+//                 {selectedOrder.customer?.phone}
+//               </p>
+//             </div>
+
+//             <div className="space-y-3 mb-8">
+//               {selectedOrder.items?.map((it, i) => (
+//                 <div
+//                   key={i}
+//                   className="flex justify-between items-center bg-zinc-50 p-4 rounded-2xl border border-zinc-100"
+//                 >
+//                   <span className="text-sm font-black truncate max-w-[200px]">
+//                     {it.qty}x {it.name?.en}
+//                   </span>
+//                   <span className="text-sm font-bold text-zinc-400">
+//                     {it.price * it.qty} EGP
+//                   </span>
+//                 </div>
+//               ))}
+//               <div className="flex justify-between px-2 pt-2">
+//                 <span className="text-lg font-black">Total</span>
+//                 <span className="text-xl font-black text-emerald-600">
+//                   {selectedOrder.total} EGP
+//                 </span>
+//               </div>
+//             </div>
+
+//             <div className="grid grid-cols-2 gap-2 pb-8">
+//               {["pending", "preparing", "ready", "cancelled"].map((s) => (
+//                 <button
+//                   key={s}
+//                   onClick={() => setOrderStatus(selectedOrder.id, s)}
+//                   className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+//                     selectedOrder.status === s
+//                       ? "bg-zinc-900 border-zinc-900 text-white shadow-lg"
+//                       : "bg-white text-zinc-400 border-zinc-100"
+//                   }`}
+//                 >
+//                   <StatusLabel status={s} lang={lang} />
+//                 </button>
+//               ))}
+//             </div>
+
+//             <button
+//               onClick={() => setSelectedId(null)}
+//               className="w-full bg-zinc-100 py-4 rounded-2xl text-xs font-black uppercase"
+//             >
+//               Dismiss
+//             </button>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* NATIVE BOTTOM TAB BAR */}
+//       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-zinc-100 pb-safe z-30">
+//         <div className="flex justify-around items-center h-20 px-4">
+//           {[
+//             { id: "orders", label: "Orders", icon: <OrderIcon /> },
+//             { id: "menu", label: "Menu", icon: <MenuIcon /> },
+//             { id: "settings", label: "Setup", icon: <SettingsIcon /> },
+//           ].map((b) => (
+//             <button
+//               key={b.id}
+//               onClick={() => setTab(b.id)}
+//               className={`flex flex-col items-center justify-center w-1/3 gap-1.5 transition-all ${
+//                 tab === b.id ? "text-zinc-900 scale-105" : "text-zinc-300"
+//               }`}
+//             >
+//               <div
+//                 className={`p-2 rounded-2xl transition-colors ${tab === b.id ? "bg-zinc-100" : ""}`}
+//               >
+//                 {b.icon}
+//               </div>
+//               <span className="text-[9px] font-black uppercase tracking-tighter">
+//                 {b.label}
+//               </span>
+//             </button>
+//           ))}
+//         </div>
+//       </nav>
+//     </div>
+//   );
+// }
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -622,11 +992,11 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
-import { t } from "../i18n";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { useToast } from "../components/ToastProvider";
 import AdminMenu from "./AdminMenu";
 import { Link } from "react-router-dom";
+import { t } from "../i18n";
 
 // Optimized Icons for Mobile (Simplified Strokes)
 const OrderIcon = () => (
@@ -686,6 +1056,13 @@ function StatusLabel({ status, lang }) {
   return map[status] || status || "—";
 }
 
+// ✅ WhatsApp builder (needed for resend button)
+function buildWaLink(phone, text) {
+  if (!phone) return null;
+  const safe = encodeURIComponent(text);
+  return `https://wa.me/${phone}?text=${safe}`;
+}
+
 export default function AdminDashboard({ lang, setLang }) {
   const [tab, setTab] = useState("orders");
   const [filter, setFilter] = useState("all");
@@ -697,6 +1074,10 @@ export default function AdminDashboard({ lang, setLang }) {
   const [selectedId, setSelectedId] = useState(null);
   const toast = useToast();
 
+  // ✅ for “new order” toast (no design changes)
+  const firstLoadRef = useRef(true);
+  const prevIdsRef = useRef(new Set());
+
   // Listen for Orders
   useEffect(() => {
     const q = query(
@@ -705,9 +1086,36 @@ export default function AdminDashboard({ lang, setLang }) {
       limit(50),
     );
     return onSnapshot(q, (snap) => {
-      setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setOrders(list);
+
+      // ✅ show toast if NEW pending order arrives (after first load)
+      const ids = new Set(list.map((x) => x.id));
+      if (firstLoadRef.current) {
+        prevIdsRef.current = ids;
+        firstLoadRef.current = false;
+        return;
+      }
+
+      let newPending = false;
+      for (const o of list) {
+        if (!prevIdsRef.current.has(o.id) && o.status === "pending") {
+          newPending = true;
+          break;
+        }
+      }
+      prevIdsRef.current = ids;
+
+      if (newPending) {
+        toast.push({
+          title: t(lang, "newOrder"),
+          message: "New pending order arrived.",
+          variant: "success",
+        });
+      }
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   // Listen for Settings
   useEffect(() => {
@@ -717,16 +1125,39 @@ export default function AdminDashboard({ lang, setLang }) {
   }, []);
 
   const setOrderStatus = async (id, status) => {
-    await updateDoc(doc(db, "orders", id), { status });
-    toast.push({
-      title: "Status updated",
-      message: `Order → ${status}`,
-      variant: "default",
-    });
+    try {
+      await updateDoc(doc(db, "orders", id), { status });
+      toast.push({
+        title: "Status updated",
+        message: `Order → ${status}`,
+        variant: "default",
+      });
+    } catch (e) {
+      console.error(e);
+      toast.push({
+        title: "Failed",
+        message: "Could not update status (check rules / internet).",
+        variant: "danger",
+      });
+    }
   };
 
   const toggleSetting = async (key) => {
-    await updateDoc(doc(db, "settings", "main"), { [key]: !settings[key] });
+    try {
+      await updateDoc(doc(db, "settings", "main"), { [key]: !settings[key] });
+      toast.push({
+        title: "Updated",
+        message: `Setting changed`,
+        variant: "default",
+      });
+    } catch (e) {
+      console.error(e);
+      toast.push({
+        title: "Failed",
+        message: "Could not update settings (check rules / internet).",
+        variant: "danger",
+      });
+    }
   };
 
   const filteredOrders = useMemo(() => {
@@ -740,6 +1171,34 @@ export default function AdminDashboard({ lang, setLang }) {
     [orders, selectedId],
   );
 
+  // ✅ WhatsApp “resend/notify” link (uses customer.whatsapp)
+  const replyLink = useMemo(() => {
+    const phone = selectedOrder?.customer?.whatsapp;
+    if (!phone) return null;
+
+    const itemsText = (selectedOrder.items || [])
+      .map((it) => {
+        const label = it?.name?.[lang] || it?.name?.en || it?.id || "Item";
+        return `- ${label} x${it.qty} = ${it.price * it.qty} EGP`;
+      })
+      .join("\n");
+
+    const track =
+      selectedOrder.trackUrl ||
+      `${window.location.origin}/order/${selectedOrder.id}`;
+
+    const msg =
+      `✅ Update for your order\n` +
+      `Order ID: ${selectedOrder.id}\n` +
+      `Status: ${selectedOrder.status}\n` +
+      `Time: ${selectedOrder?.scheduled?.date || ""} ${selectedOrder?.scheduled?.time || ""}\n\n` +
+      `Items:\n${itemsText}\n\n` +
+      `Total: ${selectedOrder.total} EGP\n\n` +
+      `Track/Cancel: ${track}`;
+
+    return buildWaLink(phone, msg);
+  }, [selectedOrder, lang]);
+
   return (
     <div className="flex flex-col h-full bg-zinc-50 font-sans select-none">
       {/* MOBILE HEADER: Clean & Compact */}
@@ -750,7 +1209,9 @@ export default function AdminDashboard({ lang, setLang }) {
           </h1>
           <div className="flex items-center gap-1.5 mt-1">
             <div
-              className={`h-1.5 w-1.5 rounded-full ${settings.isOpen ? "bg-emerald-500" : "bg-rose-500"}`}
+              className={`h-1.5 w-1.5 rounded-full ${
+                settings.isOpen ? "bg-emerald-500" : "bg-rose-500"
+              }`}
             />
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
               {settings.isOpen ? "Live" : "Closed"}
@@ -760,7 +1221,7 @@ export default function AdminDashboard({ lang, setLang }) {
         <div className="flex items-center gap-2">
           <LanguageSwitcher lang={lang} setLang={setLang} />
 
-          {/* Add this Link button */}
+          {/* Home button */}
           <Link
             to="/"
             className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors"
@@ -772,6 +1233,7 @@ export default function AdminDashboard({ lang, setLang }) {
           <button
             onClick={() => signOut(auth)}
             className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full"
+            title="Sign out"
           >
             <span className="text-xs">🚪</span>
           </button>
@@ -868,7 +1330,11 @@ export default function AdminDashboard({ lang, setLang }) {
                 >
                   <span className="font-black text-zinc-800">{s.label}</span>
                   <span
-                    className={`text-[10px] font-black px-3 py-1.5 rounded-full ${s.val === "OPEN" || s.val === "ACTIVE" ? "bg-emerald-500 text-white" : "bg-zinc-200 text-zinc-500"}`}
+                    className={`text-[10px] font-black px-3 py-1.5 rounded-full ${
+                      s.val === "OPEN" || s.val === "ACTIVE"
+                        ? "bg-emerald-500 text-white"
+                        : "bg-zinc-200 text-zinc-500"
+                    }`}
                   >
                     {s.val}
                   </span>
@@ -894,10 +1360,12 @@ export default function AdminDashboard({ lang, setLang }) {
                 Customer
               </p>
               <h3 className="text-2xl font-black">
-                {selectedOrder.customer?.name}
+                {selectedOrder.customer?.name || "Guest"}
               </h3>
+
+              {/* ✅ show whatsapp (your data uses customer.whatsapp) */}
               <p className="text-sm font-bold text-zinc-500">
-                {selectedOrder.customer?.phone}
+                {selectedOrder.customer?.whatsapp || "No WhatsApp saved"}
               </p>
             </div>
 
@@ -908,7 +1376,7 @@ export default function AdminDashboard({ lang, setLang }) {
                   className="flex justify-between items-center bg-zinc-50 p-4 rounded-2xl border border-zinc-100"
                 >
                   <span className="text-sm font-black truncate max-w-[200px]">
-                    {it.qty}x {it.name?.en}
+                    {it.qty}x {it?.name?.[lang] || it?.name?.en || it.id}
                   </span>
                   <span className="text-sm font-bold text-zinc-400">
                     {it.price * it.qty} EGP
@@ -923,7 +1391,7 @@ export default function AdminDashboard({ lang, setLang }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pb-8">
+            <div className="grid grid-cols-2 gap-2 pb-4">
               {["pending", "preparing", "ready", "cancelled"].map((s) => (
                 <button
                   key={s}
@@ -939,9 +1407,46 @@ export default function AdminDashboard({ lang, setLang }) {
               ))}
             </div>
 
+            {/* ✅ RESEND / NOTIFY BUTTON (design consistent) */}
+            <button
+              type="button"
+              disabled={!replyLink || selectedOrder.status !== "ready"}
+              onClick={() => {
+                if (!replyLink) {
+                  toast.push({
+                    title: "Missing WhatsApp",
+                    message: "This order has no customer WhatsApp number.",
+                    variant: "warning",
+                  });
+                  return;
+                }
+                if (selectedOrder.status !== "ready") {
+                  toast.push({
+                    title: "Not ready yet",
+                    message: "Set status to READY first, then notify.",
+                    variant: "warning",
+                  });
+                  return;
+                }
+                window.open(replyLink, "_blank", "noopener,noreferrer");
+                toast.push({
+                  title: "Sent",
+                  message: "WhatsApp opened to notify customer.",
+                  variant: "success",
+                });
+              }}
+              className={`w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+                replyLink && selectedOrder.status === "ready"
+                  ? "bg-emerald-600 text-white shadow-lg active:scale-95"
+                  : "bg-emerald-600/20 text-white/70"
+              }`}
+            >
+              Notify customer (Ready)
+            </button>
+
             <button
               onClick={() => setSelectedId(null)}
-              className="w-full bg-zinc-100 py-4 rounded-2xl text-xs font-black uppercase"
+              className="w-full bg-zinc-100 py-4 rounded-2xl text-xs font-black uppercase mt-3"
             >
               Dismiss
             </button>
@@ -965,7 +1470,9 @@ export default function AdminDashboard({ lang, setLang }) {
               }`}
             >
               <div
-                className={`p-2 rounded-2xl transition-colors ${tab === b.id ? "bg-zinc-100" : ""}`}
+                className={`p-2 rounded-2xl transition-colors ${
+                  tab === b.id ? "bg-zinc-100" : ""
+                }`}
               >
                 {b.icon}
               </div>
