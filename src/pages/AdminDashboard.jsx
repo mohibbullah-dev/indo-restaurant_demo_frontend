@@ -759,6 +759,16 @@ export default function AdminDashboard({ lang, setLang }) {
         </div>
         <div className="flex items-center gap-2">
           <LanguageSwitcher lang={lang} setLang={setLang} />
+
+          {/* Add this Link button */}
+          <Link
+            to="/"
+            className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors"
+            title="Go to Home"
+          >
+            <span className="text-xs">🏠</span>
+          </Link>
+
           <button
             onClick={() => signOut(auth)}
             className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-full"
