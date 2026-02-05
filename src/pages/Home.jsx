@@ -662,7 +662,6 @@
 //   );
 // }
 
-
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -724,8 +723,10 @@ export default function Home({
   const cartCount = Object.values(cart).reduce((s, x) => s + x.qty, 0);
   const total = Object.values(cart).reduce((s, x) => s + x.qty * x.price, 0);
 
-  const restaurantWa = settings.restaurantWhatsAppNumber || settings.restaurantWa || "";
-  const canCheckout = cartCount > 0 && settings.isOpen && settings.acceptingOrders;
+  const restaurantWa =
+    settings.restaurantWhatsAppNumber || settings.restaurantWa || "";
+  const canCheckout =
+    cartCount > 0 && settings.isOpen && settings.acceptingOrders;
 
   const onCheckout = () => {
     if (!canCheckout) {
@@ -749,7 +750,9 @@ export default function Home({
               {t(lang, "brand")}
             </h1>
             <div className="flex items-center gap-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${settings.isOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${settings.isOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
+              />
               <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 {settings.isOpen ? t(lang, "openNow") : t(lang, "closedNow")}
               </span>
@@ -764,20 +767,35 @@ export default function Home({
                 className="flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95 sm:px-5 sm:py-2.5 sm:text-xs"
               >
                 <span className="hidden sm:inline">Dashboard</span>
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
                 </svg>
               </Link>
             ) : (
               <Link
-                to="/login"
+                to="/admin/login"
                 className="flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 transition-all hover:bg-zinc-50 active:scale-95 sm:px-5 sm:py-2.5 sm:text-xs"
               >
                 <span>{t(lang, "login") || "Login"}</span>
               </Link>
             )}
-            
+
             <LanguageSwitcher lang={lang} setLang={setLang} />
           </div>
         </div>
@@ -790,18 +808,30 @@ export default function Home({
             <div className="rounded-[2rem] border border-zinc-100 bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between border-b border-zinc-50 pb-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Lead Time</p>
-                  <p className="text-lg font-black">{settings.minLeadMinutes}m</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    Lead Time
+                  </p>
+                  <p className="text-lg font-black">
+                    {settings.minLeadMinutes}m
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Ordering</p>
-                  <p className={`text-sm font-black ${settings.acceptingOrders ? "text-emerald-500" : "text-rose-500"}`}>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    Ordering
+                  </p>
+                  <p
+                    className={`text-sm font-black ${settings.acceptingOrders ? "text-emerald-500" : "text-rose-500"}`}
+                  >
                     {settings.acceptingOrders ? "ACTIVE" : "BUSY"}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => document.getElementById("menuSection")?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() =>
+                  document
+                    .getElementById("menuSection")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
                 className="mt-4 w-full rounded-2xl bg-zinc-50 py-3 text-xs font-black uppercase tracking-widest text-zinc-900 transition-colors hover:bg-zinc-100 active:scale-95"
               >
                 {t(lang, "viewMenu")}
@@ -826,8 +856,23 @@ export default function Home({
         </div>
       </main>
 
-      <CartBar lang={lang} cartCount={cartCount} total={total} onClear={clearCart} onCheckout={onCheckout} />
-      <CheckoutSheet lang={lang} open={checkoutOpen} onClose={() => setCheckoutOpen(false)} cart={cart} total={total} restaurantWhatsAppNumber={restaurantWa} settings={settings} onOrderCreated={clearCart} />
+      <CartBar
+        lang={lang}
+        cartCount={cartCount}
+        total={total}
+        onClear={clearCart}
+        onCheckout={onCheckout}
+      />
+      <CheckoutSheet
+        lang={lang}
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        cart={cart}
+        total={total}
+        restaurantWhatsAppNumber={restaurantWa}
+        settings={settings}
+        onOrderCreated={clearCart}
+      />
     </div>
   );
 }
