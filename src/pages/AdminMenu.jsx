@@ -1199,7 +1199,7 @@ export default function AdminMenu({ lang }) {
           </h2>
           <button
             onClick={() => setIsFormOpen(true)}
-            className="text-[11px] font-black uppercase text-blue-600"
+            className="text-[11px] font-black uppercase text-white rounded-lg py-2 cursor-pointer transition-all hover:bg-blue-700 px-4 bg-blue-600"
           >
             + Add New
           </button>
