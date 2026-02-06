@@ -1352,21 +1352,21 @@ export default function AdminMenu({ lang }) {
                     value={nameEn}
                     onChange={(e) => setNameEn(e.target.value)}
                     placeholder="English Name (required)"
-                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm font-bold"
+                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm shadow-sm font-bold"
                   />
 
                   <input
                     value={nameId}
                     onChange={(e) => setNameId(e.target.value)}
                     placeholder="Indonesian Name (optional)"
-                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm font-bold"
+                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm shadow-sm font-bold"
                   />
 
                   <input
                     value={nameAr}
                     onChange={(e) => setNameAr(e.target.value)}
                     placeholder="الاسم بالعربي (optional)"
-                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm font-bold text-right"
+                    className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm shadow-sm font-bold text-right"
                   />
                 </div>
 
@@ -1380,7 +1380,7 @@ export default function AdminMenu({ lang }) {
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="0.00"
-                      className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm font-bold"
+                      className="w-full bg-zinc-50 border-none shadow-sm rounded-2xl p-4 text-sm font-bold"
                     />
                   </div>
 
@@ -1391,7 +1391,7 @@ export default function AdminMenu({ lang }) {
                     <select
                       value={categoryId}
                       onChange={(e) => setCategoryId(e.target.value)}
-                      className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm font-bold appearance-none"
+                      className="w-full bg-zinc-50 border-none rounded-2xl p-4 text-sm shadow-sm font-bold appearance-none"
                     >
                       {cats.map((c) => (
                         <option key={c.id} value={c.id}>
