@@ -70,7 +70,7 @@ export default function Menu({
           return (
             <article
               key={it.id}
-              className="group relative flex h-32 flex-row overflow-hidden rounded-2xl border border-zinc-100 bg-white transition-all active:scale-[0.98] sm:h-auto sm:flex-col sm:rounded-[2.5rem] sm:hover:shadow-xl sm:hover:shadow-zinc-200/50"
+              className="group relative flex h-32 flex-row overflow-hidden rounded-2xl border border-zinc-100 bg-white transition-all active:scale-[0.98] sm:h-auto sm:flex-col sm:rounded-[2.5rem] shadow-sm sm:hover:shadow-xl sm:hover:shadow-zinc-200/50"
             >
               {/* IMAGE CONTAINER */}
               <div className="relative aspect-square h-full shrink-0 overflow-hidden sm:h-auto sm:w-full">
