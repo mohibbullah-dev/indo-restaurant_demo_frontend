@@ -1465,8 +1465,8 @@ export default function AdminDashboard({ lang, setLang }) {
             <button
               key={b.id}
               onClick={() => setTab(b.id)}
-              className={`flex flex-col items-center justify-center w-1/3 gap-1.5 transition-all ${
-                tab === b.id ? "text-zinc-900 scale-105" : "text-zinc-300"
+              className={`flex flex-col items-center text-lg justify-center w-1/3 gap-1.5 transition-all ${
+                tab === b.id ? "text-zinc-900 scale-105" : "text-zinc-400"
               }`}
             >
               <div
